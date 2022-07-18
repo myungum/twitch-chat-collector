@@ -27,7 +27,7 @@ void Client::stop()
     deadline.cancel();
     std::cout << "Stopped : " << channel << "\n";
 
-    std::this_thread::sleep_for(std::chrono::seconds(210));
+    std::this_thread::sleep_for(std::chrono::milliseconds(DISPOSE_TIMEOUT));
     is_disposed = true;
 }
 
@@ -36,7 +36,7 @@ void Client::start_connect(tcp::resolver::iterator endpoint_iter)
     if (endpoint_iter != tcp::resolver::iterator())
     {
         std::cout << "Trying " << endpoint_iter->endpoint() << "(" << channel + ")\n";
-        deadline.expires_from_now(boost::posix_time::seconds(180));
+        deadline.expires_from_now(boost::posix_time::milliseconds(CONNECT_TIMEOUT));
         sck.async_connect(endpoint_iter->endpoint(),
             boost::bind(&Client::handle_connect,
                 this, _1, endpoint_iter));
@@ -80,7 +80,7 @@ void Client::handle_connect(const boost::system::error_code& ec,
 void Client::start_read()
 {
     // Set a deadline for the read operation.
-    deadline.expires_from_now(boost::posix_time::seconds(60));
+    deadline.expires_from_now(boost::posix_time::milliseconds(READ_TIMEOUT));
 
     // Start an asynchronous operation to read a newline-delimited message.
     boost::asio::async_read_until(sck, input_buf, '\n',

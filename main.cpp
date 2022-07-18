@@ -7,6 +7,7 @@
 
 #include "db.hpp"
 #include "client.hpp"
+#define CHANNEL_UPDATE_DELAY 10000
 
 int main()
 {
@@ -68,11 +69,11 @@ int main()
                     Client* client = new Client(io_service, token, user_name, *channel, db);
                     client->start(io_service, r.resolve(tcp::resolver::query(ip, port)));
                     clients.push_back(client);
-                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                    std::this_thread::sleep_for(std::chrono::milliseconds(JOIN_DELAY));
                 }
             }
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+            std::this_thread::sleep_for(std::chrono::milliseconds(CHANNEL_UPDATE_DELAY));
         }
 
     }

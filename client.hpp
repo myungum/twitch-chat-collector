@@ -13,6 +13,10 @@
 #include <iostream>
 #include <string>
 #include "db.hpp"
+#define JOIN_DELAY 500
+#define CONNECT_TIMEOUT 180000
+#define READ_TIMEOUT 180000
+#define DISPOSE_TIMEOUT 600000
 
 using boost::asio::deadline_timer;
 using boost::asio::ip::tcp;
