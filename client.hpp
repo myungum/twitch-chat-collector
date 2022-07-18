@@ -20,6 +20,7 @@ using boost::asio::ip::tcp;
 class Client {
 public:
     bool is_stopped;
+    bool is_disposed;
     std::string token, user_name, channel;
 
     Client(boost::asio::io_service& io_service, std::string token, std::string user_name, std::string channel, DB* db);

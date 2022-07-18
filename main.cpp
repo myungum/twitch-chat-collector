@@ -45,7 +45,8 @@ int main()
         while (1) {
             // remove stopped clinet
             for (auto p = clients.begin(); p != clients.end(); ) {
-                if ((*p)->is_stopped) {
+                if ((*p)->is_disposed) {
+                    delete* p;
                     p = clients.erase(p);
                 }
                 else {

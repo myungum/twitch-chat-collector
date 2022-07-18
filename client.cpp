@@ -2,6 +2,7 @@
 
 Client::Client(boost::asio::io_service& io_service, std::string token, std::string user_name, std::string channel, DB* db)
     : is_stopped(false),
+    is_disposed(false),
     sck(io_service),
     deadline(io_service)
 {
@@ -25,6 +26,9 @@ void Client::stop()
     sck.close();
     deadline.cancel();
     std::cout << "Stopped : " << channel << "\n";
+
+    std::this_thread::sleep_for(std::chrono::seconds(210));
+    is_disposed = true;
 }
 
 void Client::start_connect(tcp::resolver::iterator endpoint_iter)
@@ -32,7 +36,7 @@ void Client::start_connect(tcp::resolver::iterator endpoint_iter)
     if (endpoint_iter != tcp::resolver::iterator())
     {
         std::cout << "Trying " << endpoint_iter->endpoint() << "(" << channel + ")\n";
-        deadline.expires_from_now(boost::posix_time::seconds(60));
+        deadline.expires_from_now(boost::posix_time::seconds(180));
         sck.async_connect(endpoint_iter->endpoint(),
             boost::bind(&Client::handle_connect,
                 this, _1, endpoint_iter));
