@@ -1,5 +1,4 @@
 #pragma once
-#pragma comment(lib, "libmySQL.lib")
 #define SQL_BUF_SIZE 1024 * 1000
 #define INSERT_PERIOD 1000
 #include <string>
