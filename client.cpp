@@ -26,9 +26,7 @@ void Client::stop()
     sck.close();
     deadline.cancel();
     std::cout << "Stopped : " << channel << "\n";
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(DISPOSE_TIMEOUT));
-    is_disposed = true;
+	is_disposed = true;
 }
 
 void Client::start_connect(tcp::resolver::iterator endpoint_iter)
@@ -99,35 +97,39 @@ void Client::handle_read(const boost::system::error_code& ec)
 
     if (!ec)
     {
-        // Extract the newline-delimited message from the buffer.
-        std::string line;
-        std::istream is(&input_buf);
-        std::getline(is, line);
+		try {
+			// Extract the newline-delimited message from the buffer.
+			std::string line;
+			std::istream is(&input_buf);
+			std::getline(is, line);
 
-        // Empty messages are heartbeats and so ignored.
-        if (!line.empty())
-        {
-            if (line.substr(0, 4).compare("PING") == 0) {
-                write("PONG " + line.substr(5, line.length() - 5));
-            }
+			// Empty messages are heartbeats and so ignored.
+			if (!line.empty())
+			{
+				if (line.substr(0, 4).compare("PING") == 0) {
+					write("PONG " + line.substr(5, line.length() - 5) + "\n");
+				}
 
-            std::vector<std::string> args = split(line);
-            if (args.size() > 3 && args[1].compare("PRIVMSG") == 0) {
-                std::string user_name = args[0].substr(1, args[0].find('!') - 1);
-                std::string chat_text = args[3].substr(1, args[3].length() - 1);
+				std::vector<std::string> args = split(line);
+				if (args.size() > 3 && args[1].compare("PRIVMSG") == 0) {
+					std::string user_name = args[0].substr(1, args[0].find('!') - 1);
+					std::string chat_text = args[3].substr(1, args[3].length() - 1);
 
-                chat_text.erase(remove(chat_text.begin(), chat_text.end(), '\''), chat_text.end());
-                chat_text.erase(remove(chat_text.begin(), chat_text.end(), '\"'), chat_text.end());
-                chat_text.erase(remove(chat_text.begin(), chat_text.end(), '\\'), chat_text.end());
-                chat_text.erase(remove(chat_text.begin(), chat_text.end(), '%'), chat_text.end());
-                chat_text.erase(remove(chat_text.begin(), chat_text.end(), '_'), chat_text.end());
+	                chat_text.erase(remove(chat_text.begin(), chat_text.end(), '\''), chat_text.end());
+	                chat_text.erase(remove(chat_text.begin(), chat_text.end(), '\"'), chat_text.end());
+					chat_text.erase(remove(chat_text.begin(), chat_text.end(), '\\'), chat_text.end());
+					chat_text.erase(remove(chat_text.begin(), chat_text.end(), '%'), chat_text.end());
+					chat_text.erase(remove(chat_text.begin(), chat_text.end(), '_'), chat_text.end());
 
-                db->insert(channel, user_name, chat_text);
-            }
+					db->insert(channel, user_name, chat_text);
+				}
+			}
 
-        }
-
-        start_read();
+			start_read();
+		}
+		catch (std::exception &e) {	
+			std::cerr << "handle_read() : " << e.what() << endl;
+		}
     }
     else
     {
@@ -138,7 +140,7 @@ void Client::handle_read(const boost::system::error_code& ec)
 
 std::vector<std::string> Client::split(const std::string& msg) {
     std::vector<std::string> result;
-
+	
     for (int i = 0, idx, pre_idx = -1; i < 3; i++) {
 
         idx = msg.find(' ', pre_idx + 1);
@@ -158,25 +160,38 @@ std::vector<std::string> Client::split(const std::string& msg) {
 
 void Client::handle_write(const boost::system::error_code& ec)
 {
-    if (is_stopped)
-        return;
+	try {
+    	if (is_stopped)
+        	return;
 
-    if (ec)
-    {
-        std::cout << "Write fail" << "\n";
-        stop();
-    }
+    	if (!ec)
+    	{
+		std::cout << "#";
+    	}
+	else {
+        	std::cout << "Write fail" << "\n";
+        	stop();
+	}
+	}
+	catch (std::exception &e) {	
+		std::cerr << "handle_write() : " << e.what() << endl;
+	}
 }
 
 void Client::check_deadline()
 {
-    if (is_stopped)
-        return;
+	try {
+    	if (is_stopped)
+        	return;
 
-    if (deadline.expires_at() <= deadline_timer::traits_type::now())
-    {
-        sck.close();
-        deadline.expires_at(boost::posix_time::pos_infin);
-    }
-    deadline.async_wait(boost::bind(&Client::check_deadline, this));
+    	if (deadline.expires_at() <= deadline_timer::traits_type::now())
+	    {
+        	stop();
+			return;
+    	}
+    	deadline.async_wait(boost::bind(&Client::check_deadline, this));
+	}
+	catch (std::exception &e) {	
+		std::cerr << "check_deadline() : " << e.what() << endl;
+	}
 }

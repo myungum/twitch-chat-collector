@@ -1,6 +1,7 @@
 #pragma once
 #define SQL_BUF_SIZE 1024 * 1000
 #define INSERT_PERIOD 1000
+#define SQL_QUEUE_MAX 300
 #include <string>
 #include <mutex>
 #include <queue>

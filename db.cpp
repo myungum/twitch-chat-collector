@@ -69,10 +69,10 @@ DB::~DB() {
 bool DB::connect(string host, string port, string user_id, string user_pw, string db_name) {
     mysql_init(&conn_opt_insert);
     mysql_init(&conn_opt_select);
-    mysql_options(&conn_opt_insert, MYSQL_SET_CHARSET_NAME, "utf8");
-    mysql_options(&conn_opt_insert, MYSQL_INIT_COMMAND, "SET NAMES utf8");
-    mysql_options(&conn_opt_select, MYSQL_SET_CHARSET_NAME, "utf8");
-    mysql_options(&conn_opt_select, MYSQL_INIT_COMMAND, "SET NAMES utf8");
+    mysql_options(&conn_opt_insert, MYSQL_SET_CHARSET_NAME, "utf8mb4");
+    mysql_options(&conn_opt_insert, MYSQL_INIT_COMMAND, "SET NAMES utf8mb4");
+    mysql_options(&conn_opt_select, MYSQL_SET_CHARSET_NAME, "utf8mb4");
+    mysql_options(&conn_opt_select, MYSQL_INIT_COMMAND, "SET NAMES utf8mb4");
 
     if (conn_insert = mysql_real_connect(&conn_opt_insert, host.c_str(), user_id.c_str(), user_pw.c_str(), db_name.c_str(), atoi(port.c_str()), (char*)NULL, 0)) {
         if (conn_select = mysql_real_connect(&conn_opt_select, host.c_str(), user_id.c_str(), user_pw.c_str(), db_name.c_str(), atoi(port.c_str()), (char*)NULL, 0)) {
@@ -92,7 +92,9 @@ bool DB::connect(string host, string port, string user_id, string user_pw, strin
 void DB::insert(string channel, string user_name, string chat_text) {
     string time = cur_time();
     m.lock();
-    sql_queue.push(new string[]{ channel, user_name, chat_text, time });
+    if (sql_queue.size() < SQL_QUEUE_MAX) {
+    	sql_queue.push(new string[]{ channel, user_name, chat_text, time });
+    }
     m.unlock();
 }
 
