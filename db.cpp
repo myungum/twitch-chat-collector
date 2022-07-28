@@ -20,8 +20,8 @@ void DB::insert_loop() {
             m.lock();
             scnt = sql_queue.size();
             m.unlock();
-            printf("%d..", scnt);
-            if (scnt <= 0)
+            cout << scnt << "..." << std::flush; 
+	    if (scnt <= 0)
                 continue;
 
             for (int sidx = 0; sidx < scnt; sidx++) {
@@ -43,8 +43,7 @@ void DB::insert_loop() {
                     + "')";
             }
             sql = "INSERT INTO tmp_chat (`channel_name`, `user_name`, `chat_text`, `chat_time`) VALUES " + sql + ";";
-            string sql_utf8 = boost::locale::conv::to_utf<char>(sql, "EUC-KR");
-            if (mysql_query(conn_insert, sql_utf8.c_str())) {
+            if (mysql_query(conn_insert, sql.c_str())) {
                 printf("SQL ERROR : %s\n", mysql_error(conn_insert));
                 cout << sql << endl;
             }

@@ -8,7 +8,6 @@
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
 #include <boost/chrono.hpp>
-#include <boost/locale.hpp>
 #include <fstream>
 #include <iostream>
 #include <string>

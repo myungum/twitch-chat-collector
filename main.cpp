@@ -45,6 +45,7 @@ int main()
         setting >> token >> user_name;
         while (1) {
             // remove stopped clinet
+	    cout << "start garbage collect\n";
             for (auto p = clients.begin(); p != clients.end(); ) {
                 if ((*p)->is_disposed) {
                     delete* p;
@@ -54,7 +55,7 @@ int main()
                     p++;
                 }
             }
-
+	    cout << "start add channels\n";
             vector<string> channels = db->get_channels();
             for (auto channel = channels.begin(); channel != channels.end(); channel++) {
                 bool exists = false;

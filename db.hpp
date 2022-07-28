@@ -10,8 +10,7 @@
 #include <vector>
 #include <ctime>
 #include <chrono>
-#include <mysql.h>
-#include <boost/locale.hpp>
+#include "/usr/include/mysql/mysql.h"
 
 using namespace std;
 

@@ -15,9 +15,9 @@ Client::Client(boost::asio::io_service& io_service, std::string token, std::stri
 void Client::start(boost::asio::io_service& io_service, tcp::resolver::iterator endpoint_iter)
 {
     start_connect(endpoint_iter);
+    deadline.async_wait(boost::bind(&Client::check_deadline, this));
     th = thread([&] { io_service.run(); });
     th.detach();
-    deadline.async_wait(boost::bind(&Client::check_deadline, this));
 }
 
 void Client::stop()
@@ -111,8 +111,7 @@ void Client::handle_read(const boost::system::error_code& ec)
                 write("PONG " + line.substr(5, line.length() - 5));
             }
 
-            std::string msg_euc_kr = boost::locale::conv::from_utf<char>(line, "EUC-KR");
-            std::vector<std::string> args = split(msg_euc_kr);
+            std::vector<std::string> args = split(line);
             if (args.size() > 3 && args[1].compare("PRIVMSG") == 0) {
                 std::string user_name = args[0].substr(1, args[0].find('!') - 1);
                 std::string chat_text = args[3].substr(1, args[3].length() - 1);
