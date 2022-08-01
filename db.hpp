@@ -1,7 +1,6 @@
 #pragma once
-#define SQL_BUF_SIZE 1024 * 1000
 #define INSERT_PERIOD 1000
-#define SQL_QUEUE_MAX 300
+#define INSERT_QUEUE_MAX 300
 #include <string>
 #include <mutex>
 #include <queue>
@@ -11,17 +10,21 @@
 #include <vector>
 #include <ctime>
 #include <chrono>
-#include "/usr/include/mysql/mysql.h"
+#include <bsoncxx/builder/stream/document.hpp>
+#include <bsoncxx/json.hpp>
+#include <mongocxx/client.hpp>
+#include <mongocxx/instance.hpp>
 
 using namespace std;
 
 class DB {
 private:
-    MYSQL conn_opt_insert, conn_opt_select;
-    MYSQL* conn_insert, * conn_select;
-    mutex m;
+    mongocxx::instance instance{};
+    mongocxx::client client;
+    mongocxx::database db;
+    mutex mtx_queue, mtx_client;
     thread th;
-    queue<string*> sql_queue;
+    queue<bsoncxx::document::value> doc_queue;
     time_t rawtime;
     struct tm* timeinfo;
     
@@ -29,9 +32,8 @@ private:
     void insert_loop();
 
 public:
-    DB();
+    DB(string host, string port, string db_name);
     ~DB();
-    bool connect(string host, string port, string user_id, string user_pw, string db_name);
     void insert(string channel, string user_name, string chat_text);
     vector<string> get_channels();
     void start();

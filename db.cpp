@@ -9,49 +9,30 @@ string DB::cur_time() {
 }
 
 void DB::insert_loop() {
+    
     while (1) {
         try {
             this_thread::sleep_for(chrono::milliseconds(INSERT_PERIOD));
 
             int scnt = 0;
-            string* args;
-            string sql;
+            vector<bsoncxx::document::value> docs;
 
-            m.lock();
-            scnt = sql_queue.size();
-            m.unlock();
+            mtx_queue.lock();
+            scnt = doc_queue.size();
+            mtx_queue.unlock();
             cout << scnt << "..." << std::flush; 
-	    if (scnt <= 0)
+	        if (scnt <= 0)
                 continue;
 
             for (int sidx = 0; sidx < scnt; sidx++) {
-                m.lock();
-                args = sql_queue.front();
-                sql_queue.pop();
-                m.unlock();
-
-                if (sql.length() > 0)
-                    sql += ", ";
-                sql += "('"
-                    + args[0]
-                    + "', '"
-                    + args[1]
-                    + "', '"
-                    + args[2]
-                    + "', '"
-                    + args[3]
-                    + "')";
+                mtx_queue.lock();
+                docs.push_back(doc_queue.front());
+                doc_queue.pop();
+                mtx_queue.unlock();
             }
-            sql = "INSERT INTO tmp_chat (`channel_name`, `user_name`, `chat_text`, `chat_time`) VALUES " + sql + ";";
-            if (mysql_query(conn_insert, sql.c_str())) {
-                printf("SQL ERROR : %s\n", mysql_error(conn_insert));
-                cout << sql << endl;
-            }
-            else {
-                if (mysql_query(conn_insert, "CALL add_chat();")) {
-                    printf("SQL ERROR : %s\n", mysql_error(conn_insert));
-                }
-            }
+            mtx_client.lock();
+            db["chats"].insert_many(docs);
+            mtx_client.unlock();
         }
         catch (int e) {
             printf("DB::insert_loop() ERROR (%d)\n", e);
@@ -60,53 +41,41 @@ void DB::insert_loop() {
     }
 }
 
-DB::DB() {
+DB::DB(string host, string port, string db_name) {
+    client = mongocxx::client{mongocxx::uri("mongodb://" + host + ":" + port)};
+    db = client[db_name];
 }
 
 DB::~DB() {
 }
 
-bool DB::connect(string host, string port, string user_id, string user_pw, string db_name) {
-    mysql_init(&conn_opt_insert);
-    mysql_init(&conn_opt_select);
-    mysql_options(&conn_opt_insert, MYSQL_SET_CHARSET_NAME, "utf8mb4");
-    mysql_options(&conn_opt_insert, MYSQL_INIT_COMMAND, "SET NAMES utf8mb4");
-    mysql_options(&conn_opt_select, MYSQL_SET_CHARSET_NAME, "utf8mb4");
-    mysql_options(&conn_opt_select, MYSQL_INIT_COMMAND, "SET NAMES utf8mb4");
-
-    if (conn_insert = mysql_real_connect(&conn_opt_insert, host.c_str(), user_id.c_str(), user_pw.c_str(), db_name.c_str(), atoi(port.c_str()), (char*)NULL, 0)) {
-        if (conn_select = mysql_real_connect(&conn_opt_select, host.c_str(), user_id.c_str(), user_pw.c_str(), db_name.c_str(), atoi(port.c_str()), (char*)NULL, 0)) {
-            return true;
-        }
-        else {
-            printf("DB CONNECT FAIL : %s\n", mysql_error(&conn_opt_select));
-            return false;
-        }
-    }
-    else {
-        printf("DB CONNECT FAIL : %s\n", mysql_error(&conn_opt_insert));
-        return false;
-    }
-}
-
 void DB::insert(string channel, string user_name, string chat_text) {
-    string time = cur_time();
-    m.lock();
-    if (sql_queue.size() < SQL_QUEUE_MAX) {
-    	sql_queue.push(new string[]{ channel, user_name, chat_text, time });
+    auto builder = bsoncxx::builder::stream::document{};
+    bsoncxx::document::value doc_value = builder
+    << "channel" << channel
+    << "user" << user_name
+    << "text" << chat_text
+    << "time" << cur_time()
+    << bsoncxx::builder::stream::finalize;
+
+    mtx_queue.lock();
+    if (doc_queue.size() < INSERT_QUEUE_MAX) {
+    	doc_queue.push(doc_value);
     }
-    m.unlock();
+    mtx_queue.unlock();
 }
 
 vector<string> DB::get_channels() {
     vector<string> channels;
-    if (mysql_query(conn_select, "SELECT top_channel_name FROM `top_channel` ORDER BY top_channel_rank ASC LIMIT 100;") == 0) {
-        MYSQL_RES* rows = mysql_store_result(conn_select);
-        MYSQL_ROW row;
-        while ((row = mysql_fetch_row(rows)) != NULL) {
-            channels.push_back(string(row[0]));
-        }
-        mysql_free_result(rows);
+    mongocxx::cursor cursor;
+
+    mtx_client.lock();
+    cursor = db["live_channels"].find({});
+    mtx_client.unlock();
+
+    for(auto doc : cursor) {
+        bsoncxx::document::element channel = doc["user_login"];
+        channels.push_back(channel.get_utf8().value.to_string());
     }
     return channels;
 }

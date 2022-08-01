@@ -14,8 +14,7 @@ int main()
     try
     {
         DB* db;
-        string db_host, db_port;
-        string db_user_id, db_user_pw, db_name;
+        string db_host, db_port, db_name;
         string ip, port;
         string token, user_name;
         boost::asio::io_service io_service;
@@ -30,12 +29,8 @@ int main()
 
 
         // db connect
-        setting >> db_host >> db_port;
-        setting >> db_user_id >> db_user_pw >> db_name;
-        db = new DB();
-        if (!db->connect(db_host, db_port, db_user_id, db_user_pw, db_name)) {
-            return 0;
-        }
+        setting >> db_host >> db_port >> db_name;
+        db = new DB(db_host, db_port, db_name);
         db->start();
 
 
