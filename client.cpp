@@ -1,10 +1,10 @@
 #include "client.hpp"
 
-Client::Client(boost::asio::io_service& io_service, std::string token, std::string user_name, std::string channel, DB* db)
+Client::Client(boost::asio::io_context& io_context, std::string token, std::string user_name, std::string channel, DB* db)
     : is_stopped(false),
     is_disposed(false),
-    sck(io_service),
-    deadline(io_service)
+    sck(io_context),
+    deadline(io_context)
 {
     this->token = token;
     this->user_name = user_name;
@@ -12,21 +12,24 @@ Client::Client(boost::asio::io_service& io_service, std::string token, std::stri
     this->db = db;
 }
 
-void Client::start(boost::asio::io_service& io_service, tcp::resolver::iterator endpoint_iter)
+void Client::start(boost::asio::io_context& io_context, tcp::resolver::iterator endpoint_iter)
 {
     start_connect(endpoint_iter);
     deadline.async_wait(boost::bind(&Client::check_deadline, this));
-    th = thread([&] { io_service.run(); });
-    th.detach();
 }
 
 void Client::stop()
 {
-    is_stopped = true;
-    sck.close();
-    deadline.cancel();
-    std::cout << "Stopped : " << channel << "\n";
-	is_disposed = true;
+	mtx_sck.lock();
+	if (!is_stopped) {
+		is_stopped = true;
+    		sck.close();
+    		deadline.cancel();
+    		std::cout << "Stopped : " << channel << "\n";
+		is_disposed = true;
+	}
+	mtx_sck.unlock();
+
 }
 
 void Client::start_connect(tcp::resolver::iterator endpoint_iter)

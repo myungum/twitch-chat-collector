@@ -50,6 +50,7 @@ DB::~DB() {
 }
 
 void DB::insert(string channel, string user_name, string chat_text) {
+	try{
     auto builder = bsoncxx::builder::stream::document{};
     bsoncxx::document::value doc_value = builder
     << "channel" << channel
@@ -63,14 +64,19 @@ void DB::insert(string channel, string user_name, string chat_text) {
     	doc_queue.push(doc_value);
     }
     mtx_queue.unlock();
+	}
+        catch (int e) {
+            printf("DB::insert() ERROR (%d)\n", e);
+            return;
+        }
+
 }
 
 vector<string> DB::get_channels() {
     vector<string> channels;
-    mongocxx::cursor cursor;
-
+        
     mtx_client.lock();
-    cursor = db["live_channels"].find({});
+    mongocxx::cursor cursor = db["live_channels"].find({});
     mtx_client.unlock();
 
     for(auto doc : cursor) {

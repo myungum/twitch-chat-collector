@@ -22,7 +22,8 @@ private:
     mongocxx::instance instance{};
     mongocxx::client client;
     mongocxx::database db;
-    mutex mtx_queue, mtx_client;
+    mutex mtx_queue;
+    mutex mtx_client;
     thread th;
     queue<bsoncxx::document::value> doc_queue;
     time_t rawtime;

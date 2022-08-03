@@ -12,7 +12,7 @@
 #include <iostream>
 #include <string>
 #include "db.hpp"
-#define JOIN_DELAY 500
+#define JOIN_DELAY 50
 #define CONNECT_TIMEOUT 180000
 #define READ_TIMEOUT 180000
 #define DISPOSE_TIMEOUT 600000
@@ -44,5 +44,5 @@ private:
     boost::asio::streambuf input_buf;
     deadline_timer deadline;
     DB* db;
-    thread th;
+    std::mutex mtx_sck;
 };
