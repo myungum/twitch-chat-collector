@@ -44,5 +44,5 @@ private:
     boost::asio::streambuf input_buf;
     deadline_timer deadline;
     DB* db;
-    std::mutex mtx_sck;
+    std::mutex mtx;
 };
