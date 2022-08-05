@@ -68,7 +68,7 @@ int main()
             cout << "start garbage collect\n";
             for (auto p = clients.begin(); p != clients.end();)
             {
-                if ((*p)->is_disposed)
+                if ((*p)->is_closed())
                 {
                     delete *p;
                     p = clients.erase(p);

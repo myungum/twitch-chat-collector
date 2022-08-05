@@ -17,7 +17,8 @@
 
 using namespace std;
 
-class DB {
+class DB
+{
 private:
     mongocxx::instance instance{};
     mongocxx::client client;
@@ -27,8 +28,8 @@ private:
     thread th;
     queue<bsoncxx::document::value> doc_queue;
     time_t rawtime;
-    struct tm* timeinfo;
-    
+    struct tm *timeinfo;
+
     string cur_time();
     void insert_loop();
 
