@@ -35,9 +35,10 @@ void DB::insert_loop()
                 doc_queue.pop();
                 mtx_queue.unlock();
             }
-            mtx_client.lock();
-            db["chats"].insert_many(docs);
-            mtx_client.unlock();
+            
+            auto client = pool.acquire();
+            (*client)[db_name]["chats"].insert_many(docs);
+            
         }
         catch (int e)
         {
@@ -49,8 +50,9 @@ void DB::insert_loop()
 
 DB::DB(string host, string port, string db_name)
 {
-    client = mongocxx::client{mongocxx::uri("mongodb://" + host + ":" + port)};
-    db = client[db_name];
+    this->host = host;
+    this->port = port;
+    this->db_name = db_name;
 }
 
 DB::~DB()
@@ -87,9 +89,8 @@ vector<string> DB::get_channels()
 {
     vector<string> channels;
 
-    mtx_client.lock();
-    mongocxx::cursor cursor = db["live_channels"].find({});
-    mtx_client.unlock();
+    auto client = pool.acquire();
+    mongocxx::cursor cursor = (*client)[db_name]["live_channels"].find({});
 
     for (auto doc : cursor)
     {

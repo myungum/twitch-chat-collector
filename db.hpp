@@ -14,17 +14,17 @@
 #include <bsoncxx/json.hpp>
 #include <mongocxx/client.hpp>
 #include <mongocxx/instance.hpp>
+#include <mongocxx/pool.hpp>
 
 using namespace std;
 
 class DB
 {
 private:
+    string host, port, db_name;
     mongocxx::instance instance{};
-    mongocxx::client client;
-    mongocxx::database db;
+    mongocxx::pool pool{mongocxx::uri{}};
     mutex mtx_queue;
-    mutex mtx_client;
     thread th;
     queue<bsoncxx::document::value> doc_queue;
     time_t rawtime;
