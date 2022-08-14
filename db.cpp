@@ -14,37 +14,33 @@ void DB::insert_loop()
 
     while (1)
     {
-        try
+        this_thread::sleep_for(chrono::milliseconds(INSERT_PERIOD));
+
+        int scnt = 0;
+        vector<bsoncxx::document::value> docs;
+
+        mtx_queue.lock();
+        scnt = doc_queue.size();
+        mtx_queue.unlock();
+
+        if (PRINT_INSERT_COUNT) {
+            std::cout << scnt << "..." << std::flush;
+        }
+
+        if (scnt <= 0) {
+            continue;
+        }
+
+        for (int sidx = 0; sidx < scnt; sidx++)
         {
-            this_thread::sleep_for(chrono::milliseconds(INSERT_PERIOD));
-
-            int scnt = 0;
-            vector<bsoncxx::document::value> docs;
-
             mtx_queue.lock();
-            scnt = doc_queue.size();
+            docs.push_back(doc_queue.front());
+            doc_queue.pop();
             mtx_queue.unlock();
-            cout << scnt << "..." << std::flush;
-            if (scnt <= 0)
-                continue;
-
-            for (int sidx = 0; sidx < scnt; sidx++)
-            {
-                mtx_queue.lock();
-                docs.push_back(doc_queue.front());
-                doc_queue.pop();
-                mtx_queue.unlock();
-            }
-            
-            auto client = pool.acquire();
-            (*client)[db_name]["chats"].insert_many(docs);
-            
         }
-        catch (int e)
-        {
-            printf("DB::insert_loop() ERROR (%d)\n", e);
-            return;
-        }
+        
+        auto client = pool.acquire();
+        (*client)[db_name]["chats"].insert_many(docs);
     }
 }
 
@@ -61,28 +57,20 @@ DB::~DB()
 
 void DB::insert(string channel, string user_name, string chat_text)
 {
-    try
-    {
-        auto builder = bsoncxx::builder::stream::document{};
-        bsoncxx::document::value doc_value = builder
-                                             << "channel" << channel
-                                             << "user" << user_name
-                                             << "text" << chat_text
-                                             << "time" << cur_time()
-                                             << bsoncxx::builder::stream::finalize;
+    auto builder = bsoncxx::builder::stream::document{};
+    bsoncxx::document::value doc_value = builder
+        << "channel" << channel
+        << "user" << user_name
+        << "text" << chat_text
+        << "time" << cur_time()
+        << bsoncxx::builder::stream::finalize;
 
-        mtx_queue.lock();
-        if (doc_queue.size() < INSERT_QUEUE_MAX)
-        {
-            doc_queue.push(doc_value);
-        }
-        mtx_queue.unlock();
-    }
-    catch (int e)
+    mtx_queue.lock();
+    if (doc_queue.size() < INSERT_QUEUE_MAX)
     {
-        printf("DB::insert() ERROR (%d)\n", e);
-        return;
+        doc_queue.push(doc_value);
     }
+    mtx_queue.unlock();
 }
 
 vector<string> DB::get_channels()
@@ -99,6 +87,8 @@ vector<string> DB::get_channels()
     }
     return channels;
 }
+
+void DB::insert_
 
 void DB::start()
 {

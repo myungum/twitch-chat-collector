@@ -33,7 +33,9 @@ void Client::stop()
         is_stopped = true;
         sck.close();
         deadline.cancel();
-        std::cout << "Stopped : " << channel << "\n";
+        if (PRINT_ABOUT_SOCKET) {
+            std::cout << "Stopped : " << channel << "\n";
+        }
     }
 }
 
@@ -41,7 +43,9 @@ void Client::start_connect(tcp::resolver::iterator endpoint_iter)
 {
     if (endpoint_iter != tcp::resolver::iterator())
     {
-        std::cout << "Trying " << endpoint_iter->endpoint() << "(" << channel + ")\n";
+        if (PRINT_ABOUT_SOCKET) {
+            std::cout << "Trying " << endpoint_iter->endpoint() << "(" << channel + ")\n";
+        }
         deadline.expires_from_now(boost::posix_time::milliseconds(CONNECT_TIMEOUT));
         sck.async_connect(endpoint_iter->endpoint(),
                           boost::bind(&Client::handle_connect,
@@ -73,10 +77,11 @@ void Client::handle_connect(const boost::system::error_code &ec,
         }
         else
         {
-            std::cout << "Connected to " << endpoint_iter->endpoint() << "(" << channel + ")\n";
-
+            if (PRINT_ABOUT_SOCKET) {
+                std::cout << "Connected to " << endpoint_iter->endpoint() << "(" << channel + ")\n";
+            }
             start_read();
-
+            write("CAP REQ :twitch.tv/commands\r\n");
             write("PASS " + token + "\r\n");
             write("NICK " + user_name + "\r\n");
             write("JOIN #" + channel + "\r\n");
@@ -121,20 +126,27 @@ void Client::handle_read(const boost::system::error_code &ec)
                 {
                     write("PONG " + line.substr(5, line.length() - 5) + "\n");
                 }
+                else {
+                    std::vector<std::string> args = split(line);
+                    if (args.size() > 3 && args[1].compare("PRIVMSG") == 0)
+                    {
+                        std::string user_name = args[0].substr(1, args[0].find('!') - 1);
+                        std::string chat_text = args[3].substr(1, args[3].length() - 1);
 
-                std::vector<std::string> args = split(line);
-                if (args.size() > 3 && args[1].compare("PRIVMSG") == 0)
-                {
-                    std::string user_name = args[0].substr(1, args[0].find('!') - 1);
-                    std::string chat_text = args[3].substr(1, args[3].length() - 1);
+                        chat_text.erase(remove(chat_text.begin(), chat_text.end(), '\''), chat_text.end());
+                        chat_text.erase(remove(chat_text.begin(), chat_text.end(), '\"'), chat_text.end());
+                        chat_text.erase(remove(chat_text.begin(), chat_text.end(), '\\'), chat_text.end());
+                        chat_text.erase(remove(chat_text.begin(), chat_text.end(), '%'), chat_text.end());
+                        chat_text.erase(remove(chat_text.begin(), chat_text.end(), '_'), chat_text.end());
 
-                    chat_text.erase(remove(chat_text.begin(), chat_text.end(), '\''), chat_text.end());
-                    chat_text.erase(remove(chat_text.begin(), chat_text.end(), '\"'), chat_text.end());
-                    chat_text.erase(remove(chat_text.begin(), chat_text.end(), '\\'), chat_text.end());
-                    chat_text.erase(remove(chat_text.begin(), chat_text.end(), '%'), chat_text.end());
-                    chat_text.erase(remove(chat_text.begin(), chat_text.end(), '_'), chat_text.end());
-
-                    db->insert(channel, user_name, chat_text);
+                        db->insert(channel, user_name, chat_text);
+                    }
+                    else if (PRINT_OTHER_MSG && 
+                    (line.find("CLEARCHAT") != std::string::npos || 
+                    line.find("CLEARMSG") != std::string::npos || 
+                    (line.find(" NOTICE") != std::string::npos && line.find("Login unsuccessful") == std::string::npos))){
+                        std::cout << line << endl;
+                    }
                 }
             }
 
@@ -142,7 +154,9 @@ void Client::handle_read(const boost::system::error_code &ec)
         }
         else
         {
-            std::cout << "Error on receive: " << ec.message() << "\n";
+            if (PRINT_ABOUT_SOCKET) {
+                std::cout << "Error on receive: " << ec.message() << "\n";
+            }
             stop();
         }
     }
@@ -181,7 +195,9 @@ void Client::handle_write(const boost::system::error_code &ec)
     {
         if (!ec)
         {
-            std::cout << "#";
+            if (PRINT_ABOUT_SOCKET) {
+                std::cout << "#";
+            }
         }
         else
         {

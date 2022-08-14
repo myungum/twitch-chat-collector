@@ -1,6 +1,7 @@
 #pragma once
 #define INSERT_PERIOD 1000
 #define INSERT_QUEUE_MAX 300
+#define PRINT_INSERT_COUNT false
 #include <string>
 #include <mutex>
 #include <queue>
