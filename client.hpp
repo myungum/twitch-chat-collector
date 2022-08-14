@@ -17,7 +17,7 @@
 #define READ_TIMEOUT 180000
 #define DISPOSE_TIMEOUT 600000
 #define PRINT_ABOUT_SOCKET true
-#define PRINT_OTHER_MSG true
+#define PRINT_OTHER_MSG false
 
 using boost::asio::deadline_timer;
 using boost::asio::ip::tcp;

@@ -47,17 +47,13 @@ int main()
     for (unsigned i = 0; i < thread::hardware_concurrency(); ++i)
     {
         boost::thread th([&io_context]
-                            {
-            try {
-    while (1) {
-                boost::this_thread::sleep(boost::posix_time::millisec(IO_CONTEXT_RUN_PERIOD));
-                cout << "io_context.run();";
-                io_context.run();
-            }
-    }
-    catch (boost::exception const& e) {
-    std::cerr << "Exception : " << boost::diagnostic_information(e) << std::endl;
-    } });
+            {
+                while (1) {
+                    boost::this_thread::sleep(boost::posix_time::millisec(IO_CONTEXT_RUN_PERIOD));
+                    cout << "io_context.run();";
+                    io_context.run();
+                }
+            });
         threads.add_thread(&th);
     }
 

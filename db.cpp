@@ -88,8 +88,6 @@ vector<string> DB::get_channels()
     return channels;
 }
 
-void DB::insert_
-
 void DB::start()
 {
     th = thread(&DB::insert_loop, this);

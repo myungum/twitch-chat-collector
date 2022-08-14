@@ -77,6 +77,7 @@ void Client::handle_connect(const boost::system::error_code &ec,
         }
         else
         {
+            // connect success
             if (PRINT_ABOUT_SOCKET) {
                 std::cout << "Connected to " << endpoint_iter->endpoint() << "(" << channel + ")\n";
             }
@@ -102,7 +103,6 @@ void Client::start_read()
 
 void Client::write(std::string msg)
 {
-
     boost::asio::async_write(sck, boost::asio::buffer(msg.c_str(), msg.length()),
                              boost::bind(&Client::handle_write, this, _1));
 }
@@ -128,17 +128,12 @@ void Client::handle_read(const boost::system::error_code &ec)
                 }
                 else {
                     std::vector<std::string> args = split(line);
+                    // receive chat
                     if (args.size() > 3 && args[1].compare("PRIVMSG") == 0)
                     {
                         std::string user_name = args[0].substr(1, args[0].find('!') - 1);
                         std::string chat_text = args[3].substr(1, args[3].length() - 1);
-
-                        chat_text.erase(remove(chat_text.begin(), chat_text.end(), '\''), chat_text.end());
-                        chat_text.erase(remove(chat_text.begin(), chat_text.end(), '\"'), chat_text.end());
-                        chat_text.erase(remove(chat_text.begin(), chat_text.end(), '\\'), chat_text.end());
-                        chat_text.erase(remove(chat_text.begin(), chat_text.end(), '%'), chat_text.end());
-                        chat_text.erase(remove(chat_text.begin(), chat_text.end(), '_'), chat_text.end());
-
+                        // insert into db
                         db->insert(channel, user_name, chat_text);
                     }
                     else if (PRINT_OTHER_MSG && 
@@ -169,7 +164,6 @@ std::vector<std::string> Client::split(const std::string &msg)
 
     for (int i = 0, idx, pre_idx = -1; i < 3; i++)
     {
-
         idx = msg.find(' ', pre_idx + 1);
         if (idx != -1)
         {
