@@ -1,8 +1,15 @@
 import requests
 from pymongo import MongoClient
+from collections import Counter
+from konlpy.tag import Okt
 import time
 
-UPDATE_PERIOD = 300
+UPDATE_PERIOD = 600
+GRAPH_NODE_MAX = 20
+GRAPH_FETCH_WORD_SIZE = 10000
+GRAPH_WORD_RANGE = 100
+okt = Okt()
+trash_list = open('불용어.txt', 'r', encoding='utf8').read().splitlines()
 
 while True:
     # connection info
@@ -52,6 +59,74 @@ while True:
         db['top_channels_by_chat_count'].delete_many({})
         db['top_channels_by_chat_count'].insert_many(docs)       
         print(len(docs), 'channels have been updated from local db.')
+
+        # make node, edge
+        nodes = []
+        links = []
+        for doc in docs:
+            if doc['count'] > GRAPH_FETCH_WORD_SIZE and len(nodes) < GRAPH_NODE_MAX:
+                doc['word_set'] = set()
+                nodes.append(doc)
+                print(doc['channel'], doc['count'])
+                # counting
+                counter = Counter()
+                for chat in db['chats'].find({'channel': doc['channel']}, {"text": 1}).sort("_id", -1).limit(GRAPH_FETCH_WORD_SIZE):
+                     for token in okt.nouns(chat['text']):
+                        if token not in trash_list:
+                            counter[token] += 1
+                for word in counter.most_common(GRAPH_WORD_RANGE):
+                    doc['word_set'].add(word[0])             
+
+        for src in range(len(nodes)):
+            for dst in range(src + 1, len(nodes)):
+                score = len(nodes[src]['word_set'] & nodes[dst]['word_set'])
+                if score > 0:
+                    links.append((src, dst, score))
+        
+        # make graph (Kruskal's algorithm)
+        links.sort(key=lambda l: l[2], reverse=True)
+        links_for_tree = []
+        parents = [-1] * len(nodes)
+
+        def get_parent(x):
+            if parents[x] == -1:
+                return x
+            parents[x] = get_parent(parents[x])
+            return parents[x]
+        
+        def merge(a, b):
+            pa = get_parent(a)
+            pb = get_parent(b)
+            if pa != pb:
+                parents[pa] = pb
+                return True
+            else:
+                return False
+
+        for link in links:
+            if merge(link[0], link[1]):
+                links_for_tree.append(link)
+
+
+        # insert graph
+        graph = dict()
+        graph['nodes'] = []
+        for node in nodes:
+            graph['nodes'].append({
+                'id': node['channel'],
+                'group': 1
+            })
+        graph['links'] = []
+        for link in links_for_tree:
+            graph['links'].append({
+                'source': nodes[link[0]]['channel'],
+                'target': nodes[link[1]]['channel'],
+                'value': link[2]
+            })
+        db['graph'].delete_many({})
+        db['graph'].insert_one(graph)
+                    
+
     except Exception as e:
         print('Exception :', str(e))
     finally:
