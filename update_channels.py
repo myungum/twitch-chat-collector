@@ -5,7 +5,7 @@ from konlpy.tag import Okt
 import time
 
 UPDATE_PERIOD = 600
-GRAPH_NODE_MAX = 20
+GRAPH_NODE_MAX = 30
 GRAPH_FETCH_WORD_SIZE = 10000
 GRAPH_WORD_RANGE = 100
 okt = Okt()
@@ -83,7 +83,7 @@ while True:
                 if score > 0:
                     links.append((src, dst, score))
         
-        # make graph (Kruskal's algorithm)
+        # make graph
         links.sort(key=lambda l: l[2], reverse=True)
         links_for_tree = []
         parents = [-1] * len(nodes)
@@ -103,9 +103,14 @@ while True:
             else:
                 return False
 
+        component_size = 0
         for link in links:
+            links_for_tree.append(link)
+            # connected component
             if merge(link[0], link[1]):
-                links_for_tree.append(link)
+                component_size += 1
+                if component_size >= len(nodes) - 1:
+                    break
 
 
         # insert graph
