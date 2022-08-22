@@ -9,6 +9,7 @@
 #include <iostream>
 #include <thread>
 #include <vector>
+#include <iomanip>
 #include <ctime>
 #include <chrono>
 #include <bsoncxx/builder/stream/document.hpp>
@@ -28,10 +29,10 @@ private:
     mutex mtx_queue;
     thread th;
     queue<bsoncxx::document::value> doc_queue;
-    time_t rawtime;
-    struct tm *timeinfo;
-
+    
+    string cur_date();
     string cur_time();
+    string cur_datetime();
     void insert_loop();
 
 public:

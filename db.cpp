@@ -1,12 +1,31 @@
 #include "db.hpp"
 
+
+string DB::cur_date() {
+    char buf_time[20];
+    time_t rawtime;
+    struct tm *timeinfo;
+
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(buf_time, sizeof(buf_time), "%Y-%m-%d", timeinfo);
+    return string(buf_time);
+}
+
 string DB::cur_time()
 {
     char buf_time[20];
+    time_t rawtime;
+    struct tm *timeinfo;
+
     time(&rawtime);
     timeinfo = localtime(&rawtime);
-    strftime(buf_time, sizeof(buf_time), "%Y-%m-%d %H:%M:%S", timeinfo);
+    strftime(buf_time, sizeof(buf_time), "%H:%M:%S", timeinfo);
     return string(buf_time);
+}
+
+string DB::cur_datetime() {
+    return cur_date() + " " + cur_time();
 }
 
 void DB::insert_loop()
@@ -24,13 +43,22 @@ void DB::insert_loop()
         mtx_queue.unlock();
 
         if (PRINT_INSERT_COUNT) {
-            std::cout << scnt << "..." << std::flush;
+            cout << scnt << "..." << std::flush;
         }
+
+        // save db status
+        auto client = pool.acquire();
+        auto db_status = bsoncxx::builder::stream::document{}
+            << "chats_per_sec" << scnt
+            << "datetime" << cur_datetime()
+            << bsoncxx::builder::stream::finalize;
+        (*client)[db_name]["status"].insert_one(db_status.view());
 
         if (scnt <= 0) {
             continue;
         }
 
+        // queue -> vector
         for (int sidx = 0; sidx < scnt; sidx++)
         {
             mtx_queue.lock();
@@ -38,8 +66,6 @@ void DB::insert_loop()
             doc_queue.pop();
             mtx_queue.unlock();
         }
-        
-        auto client = pool.acquire();
         (*client)[db_name]["chats"].insert_many(docs);
     }
 }
@@ -62,6 +88,7 @@ void DB::insert(string channel, string user_name, string chat_text)
         << "channel" << channel
         << "user" << user_name
         << "text" << chat_text
+        << "date" << cur_date()
         << "time" << cur_time()
         << bsoncxx::builder::stream::finalize;
 
