@@ -1,14 +1,17 @@
 import requests
 from pymongo import MongoClient
 from collections import Counter
-from konlpy.tag import Okt
+from konlpy.tag import *
 import time
+from tqdm import tqdm
+from datetime import datetime
 
-UPDATE_PERIOD = 600
+UPDATE_PERIOD = 60
 GRAPH_NODE_MAX = 30
 GRAPH_FETCH_WORD_SIZE = 10000
 GRAPH_WORD_RANGE = 100
-okt = Okt()
+WORD_STATISTICS_MIN_COUNT = 5
+mecab = Mecab()
 trash_list = open('불용어.txt', 'r', encoding='utf8').read().splitlines()
 
 while True:
@@ -50,87 +53,38 @@ while True:
             # fail
             else:
                 print(res.text)
-        # update channels & sort by chat count
-        docs = []
-        for channel in db['chats'].aggregate([{"$group": {"_id": "$channel", 'count': {'$sum': 1}}}]):
-            doc = {'channel': channel['_id'], 'count': channel['count']}
-            docs.append(doc)
-        docs.sort(key=lambda doc: doc['count'], reverse=True)
-        db['top_channels_by_chat_count'].delete_many({})
-        db['top_channels_by_chat_count'].insert_many(docs)       
-        print(len(docs), 'channels have been updated from local db.')
-
-        # make node, edge
-        nodes = []
-        links = []
-        for doc in docs:
-            if doc['count'] > GRAPH_FETCH_WORD_SIZE and len(nodes) < GRAPH_NODE_MAX:
-                doc['word_set'] = set()
-                nodes.append(doc)
-                print(doc['channel'], doc['count'])
-                # counting
-                counter = Counter()
-                for chat in db['chats'].find({'channel': doc['channel']}, {"text": 1}).sort("_id", -1).limit(GRAPH_FETCH_WORD_SIZE):
-                     for token in okt.nouns(chat['text']):
-                        if token not in trash_list:
-                            counter[token] += 1
-                for word in counter.most_common(GRAPH_WORD_RANGE):
-                    doc['word_set'].add(word[0])             
-
-        for src in range(len(nodes)):
-            for dst in range(src + 1, len(nodes)):
-                score = len(nodes[src]['word_set'] & nodes[dst]['word_set'])
-                if score > 0:
-                    links.append((src, dst, score))
+                
+        # word statistics
+        date_now =  datetime.now().date()
+        target_days = []
+        for date_str in db['chats'].distinct('date'):
+            date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            if date < date_now and db['word_statistics'].find_one({'date': date_str}) is None:
+                target_days.append(date_str)
         
-        # make graph
-        links.sort(key=lambda l: l[2], reverse=True)
-        links_for_tree = []
-        parents = [-1] * len(nodes)
-
-        def get_parent(x):
-            if parents[x] == -1:
-                return x
-            parents[x] = get_parent(parents[x])
-            return parents[x]
-        
-        def merge(a, b):
-            pa = get_parent(a)
-            pb = get_parent(b)
-            if pa != pb:
-                parents[pa] = pb
-                return True
-            else:
-                return False
-
-        component_size = 0
-        for link in links:
-            links_for_tree.append(link)
-            # connected component
-            if merge(link[0], link[1]):
-                component_size += 1
-                if component_size >= len(nodes) - 1:
-                    break
-
-
-        # insert graph
-        graph = dict()
-        graph['nodes'] = []
-        for node in nodes:
-            graph['nodes'].append({
-                'id': node['channel'],
-                'group': 1
-            })
-        graph['links'] = []
-        for link in links_for_tree:
-            graph['links'].append({
-                'source': nodes[link[0]]['channel'],
-                'target': nodes[link[1]]['channel'],
-                'value': link[2]
-            })
-        db['graph'].delete_many({})
-        db['graph'].insert_one(graph)
-                    
+        if len(target_days) > 0:
+            for date_str in tqdm(target_days):
+                print('make word statistics:', date_str)
+                dic = dict()
+                for doc_chat in tqdm(list(db['chats'].find({'date': date_str}, {'_id': 0, 'channel': 1, 'text': 1}))):
+                    if doc_chat['channel'] not in dic:
+                        dic[doc_chat['channel']] = Counter()
+                    for token in mecab.nouns(doc_chat['text']):
+                        dic[doc_chat['channel']][token] += 1
+                
+                docs = []
+                for channel, counter in dic.items():
+                    words = dict()
+                    for word, count in counter.most_common():
+                        if count < WORD_STATISTICS_MIN_COUNT:
+                            break
+                        words[word] = count
+                    docs.append({
+                        'date' : date_str,
+                        'channel' : channel,
+                        'words' : words
+                    })
+                db['word_statistics'].insert_many(docs)            
 
     except Exception as e:
         print('Exception :', str(e))
