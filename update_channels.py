@@ -12,7 +12,7 @@ GRAPH_NODE_MAX = 30
 GRAPH_FETCH_WORD_SIZE = 10000
 GRAPH_WORD_RANGE = 100
 WORD_STATISTICS_MIN_COUNT = 5
-SUDDEN_INCRESE_RANK_SIZE = 30000
+SUDDEN_INCREASE_RANK_SIZE = 30000
 mecab = Mecab()
 trash_list = open('불용어.txt', 'r', encoding='utf8').read().splitlines()
 
@@ -101,10 +101,11 @@ def update_word_sudden_increase(today):
         for doc in tqdm(docs):
             without_hangul = re.compile('[^ 가-힣+]')
             hangul = without_hangul.sub('', doc['text'])
-            for word in hangul.split(' '):
-                for st in range(len(word)):
-                    for ed in range(st + 2, len(word) + 1):
-                        counter[word[st:ed]] += 1
+            for st in range(len(hangul)):
+                # 미등록 형태소는 첫번째 형태소로 나올 확률이 높다. 참조 : 김보겸 이재성(2016), 「확률 기반 미등록 단어 분리 및 태깅」
+                if hangul[st] != ' ' and (st == 0 or hangul[st - 1] == ' '):
+                    for ed in range(st + 2, len(hangul) + 1):
+                        counter[hangul[st:ed]] += 1
         return counter.most_common(n)
 
 
@@ -114,10 +115,11 @@ def update_word_sudden_increase(today):
     pre_target_day_str = pre_target_day.strftime('%Y-%m-%d')
 
     if db['word_increase'].find_one({'date': target_day_str}) is None:
-        pre_dic = dict(get_word_list(pre_target_day_str, SUDDEN_INCRESE_RANK_SIZE))
+        pre_dic = dict(get_word_list(pre_target_day_str, SUDDEN_INCREASE_RANK_SIZE))
 
+        # calculate rate of change
         increase = []
-        for word, count in get_word_list(target_day_str, SUDDEN_INCRESE_RANK_SIZE):
+        for word, count in get_word_list(target_day_str, SUDDEN_INCREASE_RANK_SIZE):
             if word in pre_dic:
                 pre_count = pre_dic[word]
                 increase.append((word, 100.0 * (count - pre_count) / pre_count))
@@ -128,6 +130,7 @@ def update_word_sudden_increase(today):
             increase_dic.pop(word[1:], None)
             increase_dic.pop(word[:-1], None)
         
+        # insert
         db['word_increase'].insert_one({'date': target_day_str, 'data': increase_dic})
 
 
