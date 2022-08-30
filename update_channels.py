@@ -139,14 +139,17 @@ while True:
         # db connection
         client = MongoClient(host=host, port=int(port))
         db = client[db_name]
-        today =  datetime.now().date()
-
+        start_time =  datetime.now()
+        
         update_live_channels()
-        update_word_statistics(today)
-        update_word_sudden_increase(today)
+        update_word_statistics(start_time.date())
+        update_word_sudden_increase(start_time.date())
 
     except Exception as e:
         print('Exception :', str(e))
     finally:
         client.close()
-    time.sleep(UPDATE_PERIOD)
+    elapsed_time = datetime.now() - start_time
+    print('elapsed time:', elapsed_time)
+    if UPDATE_PERIOD > elapsed_time.seconds:
+        time.sleep(UPDATE_PERIOD - elapsed_time.seconds)
