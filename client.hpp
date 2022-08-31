@@ -19,7 +19,6 @@
 #define PRINT_ABOUT_SOCKET true
 #define PRINT_OTHER_MSG false
 
-using boost::asio::deadline_timer;
 using boost::asio::ip::tcp;
 
 class Client
@@ -44,7 +43,7 @@ private:
 
     tcp::socket sck;
     boost::asio::streambuf input_buf;
-    deadline_timer deadline;
+    boost::asio::deadline_timer deadline;
     DB *db;
     std::mutex mtx;
     bool is_stopped;

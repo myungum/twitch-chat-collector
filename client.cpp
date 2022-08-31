@@ -140,7 +140,7 @@ void Client::handle_read(const boost::system::error_code &ec)
                     (line.find("CLEARCHAT") != std::string::npos || 
                     line.find("CLEARMSG") != std::string::npos || 
                     (line.find(" NOTICE") != std::string::npos && line.find("Login unsuccessful") == std::string::npos))){
-                        std::cout << line << endl;
+                        std::cout << line << std::endl;
                     }
                 }
             }
@@ -208,7 +208,7 @@ void Client::check_deadline()
     mtx.lock();
     if (!is_stopped)
     {
-        if (deadline.expires_at() <= deadline_timer::traits_type::now())
+        if (deadline.expires_at() <= boost::asio::deadline_timer::traits_type::now())
         {
             stop();
         }

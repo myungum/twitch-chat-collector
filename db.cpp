@@ -1,7 +1,7 @@
 #include "db.hpp"
 
 
-string DB::cur_date() {
+std::string DB::cur_date() {
     char buf_time[20];
     time_t rawtime;
     struct tm *timeinfo;
@@ -9,10 +9,10 @@ string DB::cur_date() {
     time(&rawtime);
     timeinfo = localtime(&rawtime);
     strftime(buf_time, sizeof(buf_time), "%Y-%m-%d", timeinfo);
-    return string(buf_time);
+    return std::string(buf_time);
 }
 
-string DB::cur_time()
+std::string DB::cur_time()
 {
     char buf_time[20];
     time_t rawtime;
@@ -21,10 +21,10 @@ string DB::cur_time()
     time(&rawtime);
     timeinfo = localtime(&rawtime);
     strftime(buf_time, sizeof(buf_time), "%H:%M:%S", timeinfo);
-    return string(buf_time);
+    return std::string(buf_time);
 }
 
-string DB::cur_datetime() {
+std::string DB::cur_datetime() {
     return cur_date() + " " + cur_time();
 }
 
@@ -33,17 +33,17 @@ void DB::insert_loop()
 
     while (1)
     {
-        this_thread::sleep_for(chrono::milliseconds(INSERT_PERIOD));
+        std::this_thread::sleep_for(std::chrono::milliseconds(INSERT_PERIOD));
 
         int scnt = 0;
-        vector<bsoncxx::document::value> docs;
+        std::vector<bsoncxx::document::value> docs;
 
         mtx_queue.lock();
         scnt = doc_queue.size();
         mtx_queue.unlock();
 
         if (PRINT_INSERT_COUNT) {
-            cout << scnt << "..." << std::flush;
+            std::cout << scnt << "..." << std::flush;
         }
 
         // save db status
@@ -70,7 +70,7 @@ void DB::insert_loop()
     }
 }
 
-DB::DB(string host, string port, string db_name)
+DB::DB(std::string host, std::string port, std::string db_name)
 {
     this->host = host;
     this->port = port;
@@ -81,7 +81,7 @@ DB::~DB()
 {
 }
 
-void DB::insert(string channel, string user_name, string chat_text)
+void DB::insert(std::string channel, std::string user_name, std::string chat_text)
 {
     auto builder = bsoncxx::builder::stream::document{};
     bsoncxx::document::value doc_value = builder
@@ -100,9 +100,9 @@ void DB::insert(string channel, string user_name, string chat_text)
     mtx_queue.unlock();
 }
 
-vector<string> DB::get_channels()
+std::vector<std::string> DB::get_channels()
 {
-    vector<string> channels;
+    std::vector<std::string> channels;
 
     auto client = pool.acquire();
     mongocxx::cursor cursor = (*client)[db_name]["live_channels"].find({});
@@ -117,7 +117,7 @@ vector<string> DB::get_channels()
 
 void DB::start()
 {
-    th = thread(&DB::insert_loop, this);
+    th = std::thread(&DB::insert_loop, this);
     th.detach();
 }
 
