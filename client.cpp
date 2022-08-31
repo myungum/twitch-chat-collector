@@ -33,7 +33,8 @@ void Client::stop()
         is_stopped = true;
         sck.close();
         deadline.cancel();
-        if (PRINT_ABOUT_SOCKET) {
+        if (PRINT_SOCKET_MSG)
+        {
             std::cout << "Stopped : " << channel << "\n";
         }
     }
@@ -43,7 +44,8 @@ void Client::start_connect(tcp::resolver::iterator endpoint_iter)
 {
     if (endpoint_iter != tcp::resolver::iterator())
     {
-        if (PRINT_ABOUT_SOCKET) {
+        if (PRINT_SOCKET_MSG)
+        {
             std::cout << "Trying " << endpoint_iter->endpoint() << "(" << channel + ")\n";
         }
         deadline.expires_from_now(boost::posix_time::milliseconds(CONNECT_TIMEOUT));
@@ -68,7 +70,6 @@ void Client::handle_connect(const boost::system::error_code &ec,
             std::cout << "Connect timed out\n";
             start_connect(++endpoint_iter);
         }
-
         else if (ec)
         {
             std::cout << "Connect error: " << ec.message() << "\n";
@@ -78,7 +79,8 @@ void Client::handle_connect(const boost::system::error_code &ec,
         else
         {
             // connect success
-            if (PRINT_ABOUT_SOCKET) {
+            if (PRINT_SOCKET_MSG)
+            {
                 std::cout << "Connected to " << endpoint_iter->endpoint() << "(" << channel + ")\n";
             }
             start_read();
@@ -126,7 +128,8 @@ void Client::handle_read(const boost::system::error_code &ec)
                 {
                     write("PONG " + line.substr(5, line.length() - 5) + "\n");
                 }
-                else {
+                else
+                {
                     std::vector<std::string> args = split(line);
                     // receive chat
                     if (args.size() > 3 && args[1].compare("PRIVMSG") == 0)
@@ -136,10 +139,10 @@ void Client::handle_read(const boost::system::error_code &ec)
                         // insert into db
                         db->insert(channel, user_name, chat_text);
                     }
-                    else if (PRINT_OTHER_MSG && 
-                    (line.find("CLEARCHAT") != std::string::npos || 
-                    line.find("CLEARMSG") != std::string::npos || 
-                    (line.find(" NOTICE") != std::string::npos && line.find("Login unsuccessful") == std::string::npos))){
+                    else if (PRINT_NOTICE_MSG &&
+                             line.find(" NOTICE") != std::string::npos && 
+                             line.find("Login unsuccessful") == std::string::npos)
+                    {
                         std::cout << line << std::endl;
                     }
                 }
@@ -149,7 +152,8 @@ void Client::handle_read(const boost::system::error_code &ec)
         }
         else
         {
-            if (PRINT_ABOUT_SOCKET) {
+            if (PRINT_SOCKET_MSG)
+            {
                 std::cout << "Error on receive: " << ec.message() << "\n";
             }
             stop();
@@ -189,7 +193,8 @@ void Client::handle_write(const boost::system::error_code &ec)
     {
         if (!ec)
         {
-            if (PRINT_ABOUT_SOCKET) {
+            if (PRINT_SOCKET_MSG)
+            {
                 std::cout << "#";
             }
         }

@@ -47,7 +47,7 @@ void Collector::start(boost::asio::io_context &io_context)
     tcp::resolver r(io_context);
     while (1)
     {
-        // remove stopped clinet
+        // remove stopped client
         if (PRINT_LOG)
         {
             std::cout << "start garbage collect\n";

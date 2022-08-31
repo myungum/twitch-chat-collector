@@ -1,7 +1,4 @@
 #pragma once
-#define INSERT_PERIOD 1000
-#define INSERT_QUEUE_MAX 300
-#define PRINT_INSERT_COUNT true
 #include <string>
 #include <mutex>
 #include <queue>
@@ -17,6 +14,9 @@
 #include <mongocxx/client.hpp>
 #include <mongocxx/instance.hpp>
 #include <mongocxx/pool.hpp>
+#define INSERT_PERIOD 1000
+#define INSERT_QUEUE_MAX 300
+#define PRINT_INSERT_COUNT true
 
 class DB
 {
@@ -27,7 +27,7 @@ private:
     std::mutex mtx_queue;
     std::thread th;
     std::queue<bsoncxx::document::value> doc_queue;
-    
+
     std::string cur_date();
     std::string cur_time();
     std::string cur_datetime();

@@ -12,6 +12,7 @@
 #include "client.hpp"
 #define CHANNEL_UPDATE_PERIOD 10000
 #define IO_CONTEXT_RUN_PERIOD 1000
+#define JOIN_DELAY 50
 #define PRINT_LOG false
 
 using boost::asio::ip::tcp;

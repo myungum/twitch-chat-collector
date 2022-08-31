@@ -12,12 +12,10 @@
 #include <iostream>
 #include <string>
 #include "db.hpp"
-#define JOIN_DELAY 50
 #define CONNECT_TIMEOUT 180000
 #define READ_TIMEOUT 180000
-#define DISPOSE_TIMEOUT 600000
-#define PRINT_ABOUT_SOCKET true
-#define PRINT_OTHER_MSG false
+#define PRINT_SOCKET_MSG true
+#define PRINT_NOTICE_MSG false
 
 using boost::asio::ip::tcp;
 

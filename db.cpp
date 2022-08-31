@@ -1,30 +1,31 @@
 #include "db.hpp"
 
-
-std::string DB::cur_date() {
+std::string DB::cur_date()
+{
     char buf_time[20];
-    time_t rawtime;
-    struct tm *timeinfo;
+    time_t raw_time;
+    struct tm *time_info;
 
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(buf_time, sizeof(buf_time), "%Y-%m-%d", timeinfo);
+    time(&raw_time);
+    time_info = localtime(&raw_time);
+    strftime(buf_time, sizeof(buf_time), "%Y-%m-%d", time_info);
     return std::string(buf_time);
 }
 
 std::string DB::cur_time()
 {
     char buf_time[20];
-    time_t rawtime;
-    struct tm *timeinfo;
+    time_t raw_time;
+    struct tm *time_info;
 
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(buf_time, sizeof(buf_time), "%H:%M:%S", timeinfo);
+    time(&raw_time);
+    time_info = localtime(&raw_time);
+    strftime(buf_time, sizeof(buf_time), "%H:%M:%S", time_info);
     return std::string(buf_time);
 }
 
-std::string DB::cur_datetime() {
+std::string DB::cur_datetime()
+{
     return cur_date() + " " + cur_time();
 }
 
@@ -35,31 +36,33 @@ void DB::insert_loop()
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(INSERT_PERIOD));
 
-        int scnt = 0;
+        int doc_cnt = 0;
         std::vector<bsoncxx::document::value> docs;
 
         mtx_queue.lock();
-        scnt = doc_queue.size();
+        doc_cnt = doc_queue.size();
         mtx_queue.unlock();
 
-        if (PRINT_INSERT_COUNT) {
-            std::cout << scnt << "..." << std::flush;
+        if (PRINT_INSERT_COUNT)
+        {
+            std::cout << doc_cnt << "..." << std::flush;
         }
 
         // save db status
         auto client = pool.acquire();
         auto db_status = bsoncxx::builder::stream::document{}
-            << "chats_per_sec" << scnt
-            << "datetime" << cur_datetime()
-            << bsoncxx::builder::stream::finalize;
+                         << "chats_per_sec" << doc_cnt
+                         << "datetime" << cur_datetime()
+                         << bsoncxx::builder::stream::finalize;
         (*client)[db_name]["status"].insert_one(db_status.view());
 
-        if (scnt <= 0) {
+        if (doc_cnt <= 0)
+        {
             continue;
         }
 
         // queue -> vector
-        for (int sidx = 0; sidx < scnt; sidx++)
+        for (int i = 0; i < doc_cnt; i++)
         {
             mtx_queue.lock();
             docs.push_back(doc_queue.front());
@@ -85,12 +88,12 @@ void DB::insert(std::string channel, std::string user_name, std::string chat_tex
 {
     auto builder = bsoncxx::builder::stream::document{};
     bsoncxx::document::value doc_value = builder
-        << "channel" << channel
-        << "user" << user_name
-        << "text" << chat_text
-        << "date" << cur_date()
-        << "time" << cur_time()
-        << bsoncxx::builder::stream::finalize;
+                                         << "channel" << channel
+                                         << "user" << user_name
+                                         << "text" << chat_text
+                                         << "date" << cur_date()
+                                         << "time" << cur_time()
+                                         << bsoncxx::builder::stream::finalize;
 
     mtx_queue.lock();
     if (doc_queue.size() < INSERT_QUEUE_MAX)
