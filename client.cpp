@@ -13,8 +13,21 @@ Client::Client(boost::asio::io_context &io_context, std::string token, std::stri
 
 void Client::start(boost::asio::io_context &io_context, tcp::resolver::iterator endpoint_iter)
 {
-    start_connect(endpoint_iter);
-    deadline.async_wait(boost::bind(&Client::check_deadline, this));
+    try
+    {
+        start_connect(endpoint_iter);
+        deadline.async_wait(boost::bind(&Client::check_deadline, this));
+    }
+    catch (const boost::exception &e)
+    {
+        if (PRINT_EXCEPTION_MSG)
+        {
+            std::cout << "Exception : " << diagnostic_information(e) << "\n";
+        }
+        mtx.lock();
+        stop();
+        mtx.unlock();
+    }
 }
 
 bool Client::is_closed()
@@ -140,7 +153,7 @@ void Client::handle_read(const boost::system::error_code &ec)
                         db->insert(channel, user_name, chat_text);
                     }
                     else if (PRINT_NOTICE_MSG &&
-                             line.find(" NOTICE") != std::string::npos && 
+                             line.find(" NOTICE") != std::string::npos &&
                              line.find("Login unsuccessful") == std::string::npos)
                     {
                         std::cout << line << std::endl;

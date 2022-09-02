@@ -16,7 +16,7 @@
 #define READ_TIMEOUT 180000
 #define PRINT_SOCKET_MSG true
 #define PRINT_NOTICE_MSG false
-
+#define PRINT_EXCEPTION_MSG true
 using boost::asio::ip::tcp;
 
 class Client
