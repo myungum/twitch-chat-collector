@@ -109,29 +109,34 @@ def update_word_sudden_increase(today):
         return counter.most_common(n)
 
 
-    target_day = today - timedelta(days=1)
-    target_day_str = target_day.strftime('%Y-%m-%d')
-    pre_target_day = today - timedelta(days=2)
-    pre_target_day_str = pre_target_day.strftime('%Y-%m-%d')
+    target_days = []
+    for date_str in db['chats'].distinct('date'):
+        date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        if date < today and db['word_increase'].find_one({'date': date_str}) is None:
+            target_days.append(date)
 
-    if db['word_increase'].find_one({'date': target_day_str}) is None:
-        pre_dic = dict(get_word_list(pre_target_day_str, SUDDEN_INCREASE_RANK_SIZE))
+    if len(target_days) > 0:
+        for target_day in tqdm(target_days):
+            target_day_str = target_day.strftime('%Y-%m-%d')
+            pre_target_day = target_day - timedelta(days=1)
+            pre_target_day_str = pre_target_day.strftime('%Y-%m-%d')
+            pre_dic = dict(get_word_list(pre_target_day_str, SUDDEN_INCREASE_RANK_SIZE))
 
-        # calculate rate of change
-        increase = []
-        for word, count in get_word_list(target_day_str, SUDDEN_INCREASE_RANK_SIZE):
-            if word in pre_dic:
-                pre_count = pre_dic[word]
-                increase.append((word, 100.0 * (count - pre_count) / pre_count))
+            # calculate rate of change
+            increase = []
+            for word, count in get_word_list(target_day_str, SUDDEN_INCREASE_RANK_SIZE):
+                if word in pre_dic:
+                    pre_count = pre_dic[word]
+                    increase.append((word, 100.0 * (count - pre_count) / pre_count))
 
-        # remove sub string
-        increase_dic = dict(increase)
-        for word, count in sorted(increase, reverse=True, key=lambda x: len(x[0])):
-            increase_dic.pop(word[1:], None)
-            increase_dic.pop(word[:-1], None)
-        
-        # insert
-        db['word_increase'].insert_one({'date': target_day_str, 'data': increase_dic})
+            # remove sub string
+            increase_dic = dict(increase)
+            for word, count in sorted(increase, reverse=True, key=lambda x: len(x[0])):
+                increase_dic.pop(word[1:], None)
+                increase_dic.pop(word[:-1], None)
+            
+            # insert
+            db['word_increase'].insert_one({'date': target_day_str, 'data': increase_dic})
 
 
 while True:
