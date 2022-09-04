@@ -58,14 +58,16 @@ def update_live_channels():
 # 2.
 def update_word_statistics(today):
     
-    target_days = []
-    for date_str in db['chats'].distinct('date'):
-        date = datetime.strptime(date_str, '%Y-%m-%d').date()
-        if date < today and db['word_statistics'].find_one({'date': date_str}) is None:
-            target_days.append(date_str)
+    # get difference set
+    not_prepared = list(set(db['chats'].distinct('date')) - set(db['word_statistics'].distinct('date')))
+    # convert str into date
+    not_prepared = [datetime.strptime(date_str, '%Y-%m-%d').date() for date_str in not_prepared]
+    # remove not finished date
+    not_prepared = [date for date in not_prepared if date < today]
 
-    if len(target_days) > 0:
-        for date_str in tqdm(target_days):
+    if len(not_prepared) > 0:
+        for date in tqdm(not_prepared):
+            date_str = date.strftime('%Y-%m-%d')
             print('make word statistics:', date_str)
             dic = dict()
             for doc_chat in tqdm(list(db['chats'].find({'date': date_str}, {'_id': 0, 'channel': 1, 'text': 1}))):
@@ -108,23 +110,24 @@ def update_word_sudden_increase(today):
                         counter[hangul[st:ed]] += 1
         return counter.most_common(n)
 
+    # get difference set
+    not_prepared = list(set(db['chats'].distinct('date')) - set(db['word_increase'].distinct('date')))
+    # convert str into date
+    not_prepared = [datetime.strptime(date_str, '%Y-%m-%d').date() for date_str in not_prepared]
+    # remove not finished date
+    not_prepared = [date for date in not_prepared if date < today]
 
-    target_days = []
-    for date_str in db['chats'].distinct('date'):
-        date = datetime.strptime(date_str, '%Y-%m-%d').date()
-        if date < today and db['word_increase'].find_one({'date': date_str}) is None:
-            target_days.append(date)
-
-    if len(target_days) > 0:
-        for target_day in tqdm(target_days):
-            target_day_str = target_day.strftime('%Y-%m-%d')
-            pre_target_day = target_day - timedelta(days=1)
-            pre_target_day_str = pre_target_day.strftime('%Y-%m-%d')
-            pre_dic = dict(get_word_list(pre_target_day_str, SUDDEN_INCREASE_RANK_SIZE))
+    if len(not_prepared) > 0:
+        for date in tqdm(not_prepared):
+            date_str = date.strftime('%Y-%m-%d')
+            print('make word increase:', date_str)
+            pre_date = date - timedelta(days=1)
+            pre_date_str = pre_date.strftime('%Y-%m-%d')
+            pre_dic = dict(get_word_list(pre_date_str, SUDDEN_INCREASE_RANK_SIZE))
 
             # calculate rate of change
             increase = []
-            for word, count in get_word_list(target_day_str, SUDDEN_INCREASE_RANK_SIZE):
+            for word, count in get_word_list(date_str, SUDDEN_INCREASE_RANK_SIZE):
                 if word in pre_dic:
                     pre_count = pre_dic[word]
                     increase.append((word, 100.0 * (count - pre_count) / pre_count))
@@ -136,7 +139,7 @@ def update_word_sudden_increase(today):
                 increase_dic.pop(word[:-1], None)
             
             # insert
-            db['word_increase'].insert_one({'date': target_day_str, 'data': increase_dic})
+            db['word_increase'].insert_one({'date': date_str, 'data': increase_dic})
 
 
 while True:
