@@ -31,7 +31,8 @@ std::string DB::cur_datetime()
 
 void DB::insert_loop()
 {
-
+    auto client = pool.acquire();
+    
     while (1)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(INSERT_PERIOD));
@@ -49,7 +50,6 @@ void DB::insert_loop()
         }
 
         // save db status
-        auto client = pool.acquire();
         auto db_status = bsoncxx::builder::stream::document{}
                          << "chats_per_sec" << doc_cnt
                          << "datetime" << cur_datetime()
