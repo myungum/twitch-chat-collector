@@ -4,6 +4,10 @@ import time
 from datetime import datetime
 
 UPDATE_PERIOD = 120
+CHANNEL_REQUEST_PERIOD = 0.2
+MAX_CHANNEL = 250
+URL_GET_TOKEN = 'https://id.twitch.tv/oauth2/token?client_id={}&client_secret={}&grant_type=client_credentials'
+URL_GET_STREAMS = 'https://api.twitch.tv/helix/streams?language=ko&first={}&after={}'
 
 # connection info
 with open('setting.txt', 'r') as f:
@@ -18,44 +22,57 @@ db = None
 def update_live_channels():
     with requests.session() as s:
         # get access token
-        res = s.post('https://id.twitch.tv/oauth2/token?client_id={}&client_secret={}&grant_type=client_credentials'.format(client_id, client_secret))
+        res = s.post(URL_GET_TOKEN.format(client_id, client_secret))
         if res.status_code == 200:
             token = res.json()['access_token']
 
             headers = {
-                'Client-ID' : client_id,
-                'Authorization' : 'Bearer ' + token,
+                'Client-ID': client_id,
+                'Authorization': 'Bearer ' + token,
                 'Accept': 'application/vnd.twitchtv.v5+json'
             }
 
             # get live channels
-            res = s.get('https://api.twitch.tv/helix/streams?language=ko&first=100', headers=headers)
-            if res.status_code == 200:
-                docs = res.json()['data']
-                db['live_channels'].delete_many({})
-                db['live_channels'].insert_many(docs)
-                print(len(docs), 'channels have been updated from twitch.')
-            # fail
-            else:
-                print(res.text)
+            channel_name_set = set()
+            channels = []
+            after = ''
+            while len(channel_name_set) < MAX_CHANNEL:
+                first = min(MAX_CHANNEL - len(channel_name_set) + 10, 100)
+                res = s.get(URL_GET_STREAMS.format(first, after), headers=headers)
+                if res.status_code == 200:
+                    after = res.json()['pagination']['cursor']
+                    for channel in res.json()['data']:
+                        channel_name = channel['user_login']
+                        # if channel is unique, then append to list
+                        if channel_name not in channel_name_set and len(channel_name_set) < MAX_CHANNEL:
+                            channel_name_set.add(channel_name)
+                            channels.append(channel)
+                # fail
+                else:
+                    print(res.text)
+                time.sleep(CHANNEL_REQUEST_PERIOD)
+            # insert
+            db['live_channels'].delete_many({})
+            db['live_channels'].insert_many(channels)
+            print('{} channels have been updated from twitch.'.format(len(channels)))
         # fail
         else:
             print(res.text)
+
 
 while True:
     try:
         # db connection
         client = MongoClient(host=host, port=int(port))
         db = client[db_name]
-        start_time =  datetime.now()
-        
-        update_live_channels()
+        start_time = datetime.now()
 
+        update_live_channels()
     except Exception as e:
         print('Exception :', str(e))
     finally:
         client.close()
     elapsed_time = datetime.now() - start_time
-    print('elapsed time:', elapsed_time)
+    print('elapsed time: {}'.format(elapsed_time))
     if UPDATE_PERIOD > elapsed_time.seconds:
         time.sleep(UPDATE_PERIOD - elapsed_time.seconds)
