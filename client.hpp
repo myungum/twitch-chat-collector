@@ -8,6 +8,9 @@
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
 #include <boost/chrono.hpp>
+#include <boost/exception/diagnostic_information.hpp>
+#include <boost/throw_exception.hpp>
+#include <boost/lexical_cast.hpp>
 #include <fstream>
 #include <iostream>
 #include <string>

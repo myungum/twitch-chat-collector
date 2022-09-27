@@ -36,9 +36,24 @@ void Collector::start(boost::asio::io_context &io_context)
         boost::thread th([&io_context]
                          {
                 while (1) {
-                    boost::this_thread::sleep(boost::posix_time::millisec(IO_CONTEXT_RUN_PERIOD));
-                    std::cout << "io_context.run();";
-                    io_context.run();
+                    try {
+                        boost::this_thread::sleep(boost::posix_time::millisec(IO_CONTEXT_RUN_PERIOD));
+                        std::cout << "io_context.run();";
+                        io_context.run();
+                    }
+                    catch(boost::system::system_error const& e) {
+                        if (PRINT_EXCEPTION_MSG)
+                        {
+                            std::cerr << "collector.cpp Exception : " << boost::diagnostic_information(e) << std::endl;
+                        }
+                    }
+                    catch (std::exception const &e)
+                    {
+                        if (PRINT_EXCEPTION_MSG)
+                        {
+                            std::cerr << "collector.cpp Exception : " << boost::diagnostic_information(e) << std::endl;
+                        }
+                    }
                 } });
         threads.add_thread(&th);
     }

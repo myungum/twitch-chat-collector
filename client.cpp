@@ -18,11 +18,20 @@ void Client::start(boost::asio::io_context &io_context, tcp::resolver::iterator 
         start_connect(endpoint_iter);
         deadline.async_wait(boost::bind(&Client::check_deadline, this));
     }
-    catch (const boost::exception &e)
+    catch (boost::system::system_error const &e)
     {
         if (PRINT_EXCEPTION_MSG)
         {
-            std::cout << "Exception : " << diagnostic_information(e) << "\n";
+            std::cerr << "client.cpp Exception : " << boost::diagnostic_information(e) << std::endl;
+        }
+        mtx.lock();
+        stop();
+    }
+    catch (std::exception const &e)
+    {
+        if (PRINT_EXCEPTION_MSG)
+        {
+            std::cerr << "client.cpp Exception : " << boost::diagnostic_information(e) << std::endl;
         }
         mtx.lock();
         stop();

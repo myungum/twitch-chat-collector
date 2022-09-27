@@ -5,6 +5,7 @@
 #include <boost/thread/thread.hpp>
 #include <boost/chrono.hpp>
 #include <boost/exception/all.hpp>
+#include <boost/exception/diagnostic_information.hpp>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -14,6 +15,7 @@
 #define IO_CONTEXT_RUN_PERIOD 1000
 #define JOIN_DELAY 50
 #define PRINT_LOG false
+#define PRINT_EXCEPTION_MSG true
 
 using boost::asio::ip::tcp;
 
