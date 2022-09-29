@@ -62,50 +62,67 @@ void Collector::start(boost::asio::io_context &io_context)
     tcp::resolver r(io_context);
     while (1)
     {
-        // remove stopped client
-        if (PRINT_LOG)
+        try
         {
-            std::cout << "start garbage collect\n";
-        }
-
-        for (auto p = clients.begin(); p != clients.end();)
-        {
-            if ((*p)->is_closed())
+            // remove stopped client
+            if (PRINT_LOG)
             {
-                delete *p;
-                p = clients.erase(p);
+                std::cout << "start garbage collect\n";
             }
-            else
-            {
-                p++;
-            }
-        }
 
-        if (PRINT_LOG)
-        {
-            std::cout << "start add channels\n";
-        }
-        std::vector<std::string> channels = db->get_channels();
-        for (auto channel = channels.begin(); channel != channels.end(); channel++)
-        {
-            bool exists = false;
-            for (auto p = clients.begin(); p != clients.end(); p++)
+            for (auto p = clients.begin(); p != clients.end();)
             {
-                if ((*p)->channel.compare(*channel) == 0)
+                if ((*p)->is_closed())
                 {
-                    exists = true;
-                    break;
+                    delete *p;
+                    p = clients.erase(p);
+                }
+                else
+                {
+                    p++;
                 }
             }
 
-            if (!exists)
+            if (PRINT_LOG)
             {
-                Client *client = new Client(io_context, token, user_name, *channel, db);
-                client->start(io_context, r.resolve(tcp::resolver::query(ip, port)));
-                clients.push_back(client);
-                std::this_thread::sleep_for(std::chrono::milliseconds(JOIN_DELAY));
+                std::cout << "start add channels\n";
+            }
+            std::vector<std::string> channels = db->get_channels();
+            for (auto channel = channels.begin(); channel != channels.end(); channel++)
+            {
+                bool exists = false;
+                for (auto p = clients.begin(); p != clients.end(); p++)
+                {
+                    if ((*p)->channel.compare(*channel) == 0)
+                    {
+                        exists = true;
+                        break;
+                    }
+                }
+
+                if (!exists)
+                {
+                    Client *client = new Client(io_context, token, user_name, *channel, db);
+                    client->start(io_context, r.resolve(tcp::resolver::query(ip, port, boost::asio::ip::resolver_query_base::numeric_service)));
+                    clients.push_back(client);
+                    std::this_thread::sleep_for(std::chrono::milliseconds(JOIN_DELAY));
+                }
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(CHANNEL_UPDATE_PERIOD));
+        }
+        catch (boost::system::system_error const &e)
+        {
+            if (PRINT_EXCEPTION_MSG)
+            {
+                std::cerr << "collector.cpp Exception : " << boost::diagnostic_information(e) << std::endl;
             }
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(CHANNEL_UPDATE_PERIOD));
+        catch (std::exception const &e)
+        {
+            if (PRINT_EXCEPTION_MSG)
+            {
+                std::cerr << "collector.cpp Exception : " << boost::diagnostic_information(e) << std::endl;
+            }
+        }
     }
 }

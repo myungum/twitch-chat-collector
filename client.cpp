@@ -26,6 +26,7 @@ void Client::start(boost::asio::io_context &io_context, tcp::resolver::iterator 
         }
         mtx.lock();
         stop();
+        mtx.unlock();
     }
     catch (std::exception const &e)
     {
