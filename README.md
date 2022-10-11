@@ -1,6 +1,7 @@
 # Twitch Chat Collector
 ##### This server can collect chats from Top 100 channels. More than 4 million chats are generated from Korean channels per day.
 ##### 상위 시청자 수 Top 100 채널들에 대해 채팅 수집할 수 있는 서버입니다. 한국 채널 기준 하루 약 400만개 이상의 채팅이 발생합니다.
+##### [Python version](https://github.com/myungum/twitch-chat-collector-python)
 
 # Dependencies
 ### C++
